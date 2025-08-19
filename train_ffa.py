@@ -9,8 +9,8 @@ import torch.optim as optim
 from torch.utils.data import Dataset, DataLoader
 import torchvision.transforms as T
 from torchvision.utils import save_image
-from aodnet_model import AODNet
-#from ffanet_model import FFA
+#from aodnet_model import AODNet
+from ffanet_model import FFA
 
 # ---------------------------
 # Custom Dataset
@@ -55,7 +55,7 @@ def train(args):
     train_dataset = DehazeDataset(args.train_hazy, args.train_gt, transform)
 
     # Model, loss, optimizer
-    model = AODNet().to(args.device)
+    model = FFA(gps = 3, blocks = 19).to(args.device)
     criterion = nn.MSELoss()
     optimizer = optim.Adam(model.parameters(), lr=args.lr)
 
@@ -68,7 +68,7 @@ def train(args):
         success = False
         while not success and batch_size > 0:
             try:
-                train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True, num_workers=8, pin_memory=True)
+                train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=4, pin_memory=True)
                 model.train()
                 running_loss = 0.0
 
@@ -92,7 +92,7 @@ def train(args):
 
                 # Save checkpoint & sample
                 if epoch % args.save_every == 0:
-                    torch.save(model.state_dict(), os.path.join(args.checkpoint_dir, f"aodnet_epoch{epoch}.pth"))
+                    torch.save(model.state_dict(), os.path.join(args.checkpoint_dir, f"ffanet_epoch{epoch}.pth"))
                     save_image(output, os.path.join(args.checkpoint_dir, f"sample_epoch{epoch}.png"))
 
                 success = True  # finished this epoch without OOM
@@ -111,7 +111,6 @@ def train(args):
 
     print("Training complete.")
 
-
 # ---------------------------
 # Argument Parser
 # ---------------------------
@@ -125,7 +124,7 @@ if __name__ == "__main__":
     parser.add_argument("--batch_size", type=int, default=16)
     parser.add_argument("--epochs", type=int, default=100)
     parser.add_argument("--lr", type=float, default=1e-3)
-    parser.add_argument("--save_every", type=int, default=10)
+    parser.add_argument("--save_every", type=int, default=5)
     parser.add_argument("--device", type=str, default="cuda" if torch.cuda.is_available() else "cpu")
 
     args = parser.parse_args()
