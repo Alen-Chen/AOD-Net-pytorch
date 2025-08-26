@@ -25,6 +25,10 @@ class PSPModule(nn.Module):
         # Fixed pooling: assumes input is divisible by pool kernel/stride
         self.branches = nn.ModuleList([
             nn.Sequential(
+                nn.AvgPool2d(kernel_size=4, stride=4),
+                nn.Conv2d(in_channels, 1, kernel_size=1),
+            ),
+            nn.Sequential(
                 nn.AvgPool2d(kernel_size=8, stride=8),
                 nn.Conv2d(in_channels, 1, kernel_size=1),
             ),
@@ -34,10 +38,6 @@ class PSPModule(nn.Module):
             ),
             nn.Sequential(
                 nn.AvgPool2d(kernel_size=32, stride=32),
-                nn.Conv2d(in_channels, 1, kernel_size=1),
-            ),
-            nn.Sequential(
-                nn.AvgPool2d(kernel_size=64, stride=64),
                 nn.Conv2d(in_channels, 1, kernel_size=1),
             ),
         ])
@@ -80,10 +80,12 @@ class FAODNet(nn.Module):
         # Final convolution for K(x) (3->3 channels)
         self.final_conv = nn.Conv2d(3, 3, kernel_size=3, padding=1)
 
+        self.b = 1
+
     def forward(self, x):
         # Feature extraction
         f1 = self.relu1(self.ds_conv1(x))  # 3 channels
-        f2 = self.relu2(self.ds_conv2(x))  # 6 channels
+        f2 = self.relu2(self.ds_conv2(f1))  # 6 channels
         
         concat1 = torch.cat([f1, f2], dim=1)  # 9 channels
         f3 = self.relu3(self.ds_conv3(concat1))  # 9 channels
@@ -91,7 +93,7 @@ class FAODNet(nn.Module):
         concat2 = torch.cat([f2, f3], dim=1)  # 15 channels
         f4 = self.relu4(self.ds_conv4(concat2))  # 6 channels
         
-        concat3 = torch.cat([f1, f2, f3, f4], dim=1)  # 24 channels
+        concat3 = torch.cat([f1, f2, f3, f4], dim=1) # 24 channels
         f5 = self.relu5(self.ds_conv5(concat3))  # 3 channels
         
         # Pyramid Pooling Module
@@ -101,5 +103,5 @@ class FAODNet(nn.Module):
         k = self.final_conv(psp_out)  # 3 channels
         
         # Dehazing formula: J(x) = K(x)·I(x) - K(x) + 1
-        j = k * x - k + 1
+        j = k * x - k + self.b
         return torch.clamp(j, 0, 1)  # Clamp to valid image range

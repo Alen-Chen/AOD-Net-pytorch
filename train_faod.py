@@ -9,8 +9,7 @@ import torch.optim as optim
 from torch.utils.data import Dataset, DataLoader
 import torchvision.transforms as T
 from torchvision.utils import save_image
-from aodnet_model import AODNet
-#from ffanet_model import FFA
+from faodnet_model import FAODNet
 
 # ---------------------------
 # Custom Dataset
@@ -55,7 +54,7 @@ def train(args):
     train_dataset = DehazeDataset(args.train_hazy, args.train_gt, transform)
 
     # Model, loss, optimizer
-    model = AODNet().to(args.device)
+    model = FAODNet().to(args.device)
     criterion = nn.MSELoss()
     optimizer = optim.Adam(model.parameters(), lr=args.lr)
 
@@ -92,7 +91,7 @@ def train(args):
 
                 # Save checkpoint & sample
                 if epoch % args.save_every == 0:
-                    torch.save(model.state_dict(), os.path.join(args.checkpoint_dir, f"aodnet_epoch{epoch}.pth"))
+                    torch.save(model.state_dict(), os.path.join(args.checkpoint_dir, f"faodnet_epoch{epoch}.pth"))
                     save_image(output, os.path.join(args.checkpoint_dir, f"sample_epoch{epoch}.png"))
 
                 success = True  # finished this epoch without OOM
